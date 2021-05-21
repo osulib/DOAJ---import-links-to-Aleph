@@ -16,8 +16,8 @@
 
 
 #initial constats - SET THIS FIRST
-set bibBase="XXX01"; #Aleph BIB base where records should be updated
-set librarianMail="best.librarian@library.moon"; #for sending reports and alerts to
+set bibBase="OSU01"; #Aleph BIB base where records should be updated
+set librarianMail="matyas.bajger@osu.cz"; #for sending reports and alerts to
 set issnIndexName='ISN'; #Aleph index code set for ISSN (Marc field 022) as it is set in $data_tab/tab11_acc or tab11_word
 set doajLinkToJournal='https://doaj.org/toc/@@@@-@@@@'; #Links ro DOAJ journals that will be added to 856 fields, '@@@@-@@@@' is replaced to real ISSN value
 set doajLinkText='$$yPlné texty online (doaj.org)'; #Text that will be added to 856 fields. Including prefix with subfield code that will be used (might subfiel;d 3 or y)
@@ -36,7 +36,7 @@ set doajLinkToJournalDomain=`echo "$doajLinkToJournal" | grep -o '://[^/]\+/'`
 set thisScriptPath=`dirname "$0"`
 
 
-printf "\n\n START `date`" | tee -a $logfile
+printf "\n\n START `date`\n" | tee -a $logfile
 
 #check argument or look for timestamp file
 echo "HARVESTING $doajOaiUrl ..." | tee -a $logfile
@@ -61,9 +61,10 @@ if ( $?2 ) then
      set force='Y'
    endif
 endif
+
 if ( $harvestFrom == '' && -e $thisScriptPath/doaj_import_links.last_harvest ) then
    if ( `cat $thisScriptPath/doaj_import_links.last_harvest | grep -c '[12][0-9]\{3\}\-[0-9]\{2\}\-[0-9]\{2\}' | bc` == 1 ) then
-      set harvestFrom=`grep -o '[12][0-9]\{3\}\-[0-9]\{2\}\-[0-9]\{2\}' | head -n1`
+      set harvestFrom=`cat $thisScriptPath/doaj_import_links.last_harvest | grep -o '[12][0-9]\{3\}\-[0-9]\{2\}\-[0-9]\{2\}' | head -n1`
       echo "Harvesting from $harvestFrom (got from file doaj_import_links.last_harvest)"
    else
       echo "ERROR - file with date of last harvest found - $thisScriptPath/doaj_import_links.last_harvest. Still it has bad syntax (no YYYY-MM-DD included):"
@@ -72,32 +73,11 @@ if ( $harvestFrom == '' && -e $thisScriptPath/doaj_import_links.last_harvest ) t
    endif
 endif
 
-if ( $harvestFrom == '' ) then #lookup last harvest file
-   if (! -e "$scriptDir/doaj_import_links.last_harvest") then
-      echo "NOTICE - no argument given and file doaj_import_links.last_harvest not found. I will harvest since 1900-01-01" |  tee -a $logfile
-      tail $logfile -n10 | mail -s "doaj_import_links.csh notice" "$librarianMail"
-      set harvestFrom="1900-01-01";
-   else
-      if ( -z "$scriptDir/doaj_import_links.last_harvest") then
-         echo "WARNING - file file doaj_import_links.last_harvest found, but it is empty. I will harvest since 1900-01-01" | tee -a $logfile
-         tail $logfile -n10 | mail -s "doaj_import_links.csh warning" "$librarianMail"
-         set harvestFrom="1900-01-01";
-      else
-         set harvestFrom=`head "$scriptDir/doaj_import_links.last_harvest" -n1 | sed 's/\s//g'`
-         if ( `echo "$harvestFrom" | grep -c '[12][0-9]\{3\}\-[0-9]\{2\}\-[0-9]\{2\}' | bc` != 1 ) then #bad syntax
-            printf "WARNING - file file doaj_import_links.last_harvest found, but has bad contents:\n`cat "$scriptDir/doaj_import_links.last_harvest" `\n\n I will harvest since 1900-01-01\n" | tee -a $logfile
-            tail $logfile -n10 | mail -s "doaj_import_links.csh warning" "$librarianMail"
-            set harvestFrom="1900-01-01";
-         else
-            echo "Last harvest date found in file doaj_import_links.last_harvest. Now harvesting from $harvestFrom" | tee -a $logfile
-         endif   
-      endif 
-   endif
-endif
-if ( "$harvestFrom" == '' || `echo "$harvestFrom" | grep -c '[12][0-9]\{3\}\-[0-9]\{2\}\-[0-9]\{2\}' | bc` != 1 ) then #final check of the date
-   echo "ERROR - date-from for harvest is empty or has bad syntax: $harvestFrom   Exiting..." | tee -a $logfile
-   tail $logfile -n10 | mail -s "doaj_import_links.csh error" "$librarianMail"
-   exit
+
+if (! -e "$scriptDir/doaj_import_links.last_harvest") then
+   echo "NOTICE - no argument given and file doaj_import_links.last_harvest not found. I will harvest since 1900-01-01" |  tee -a $logfile
+   tail $logfile -n10 | mail -s "doaj_import_links.csh notice" "$librarianMail"
+   set harvestFrom="1900-01-01";
 endif
 
 #harvest
@@ -111,7 +91,6 @@ if ( `whereis xmllint | wc -w | bc` == 1 ) then
    tail $logfile -n10 | mail -s "doaj_import_links.csh error" "$librarianMail"
    exit
 endif
-
 echo "performing HARVEST from $harvestFrom" | tee -a $logfile
 set doajDataFile="$alephe_scratch/doaj_oai$today.xml"
 python "$scriptDir/pyoaiharvest.py" -l "$doajOaiUrl" -f "$harvestFrom" -m 'oai_dc' -o "$doajDataFile" | tee -a $logfile
