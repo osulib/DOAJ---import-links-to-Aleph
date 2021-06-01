@@ -215,7 +215,7 @@ else
    printf "\n\n END `date`" | tee -a $logfile
    exit 0
 endif
-csh -f $aleph_proc/p_manage_18 "$bibBase,doaj_856toimport,doaj_856toimport.reject,doaj_856toimport.doc_log,OLD,,,FULL,COR,M,,,$doajImportCataloger,$doajImportCatalogerLevel," | tee $dataScratch/doaj.manage18
+csh -f $aleph_proc/p_manage_18 "$bibBase,doaj_856toimport,doaj_856toimport.reject,doaj_856toimport.doc_log,OLD,,,FULL,APP,M,,,$doajImportCataloger,$doajImportCatalogerLevel," | tee $dataScratch/doaj.manage18
 if ( `grep -c -i  -e 'error[^_]'  -e 'ORA-' $dataScratch/doaj.manage18 | bc` > 1 ) then
    echo "ERROR in print-18 (see log above)." | tee -a $logfile
    cat $dataScratch/doaj.manage18 | mail -s "doaj_import_links.csh error in manage-18 (import new/changed links to DOAJ)" "$librarianMail"
